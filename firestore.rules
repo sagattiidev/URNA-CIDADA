@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Exclusivamente demonstração educativa. Não autentica eleitores.
+    function numeroValido(cargo, numero) {
+      return numero is string && ((cargo == 'vereador' && numero.matches('^[0-9]{5}$'))
+        || (cargo == 'prefeito' && numero.matches('^[0-9]{2}$')));
+    }
+    function idFicticio(id) {
+      return id in ['vereador_91123', 'vereador_91456', 'vereador_92111', 'vereador_92222',
+        'vereador_93333', 'vereador_93789', 'vereador_94555', 'vereador_94777',
+        'prefeito_91', 'prefeito_92', 'prefeito_93', 'prefeito_94'];
+    }
+    match /candidatos/{id} {
+      allow read: if true;
+      // Temporário para carga inicial: após os 12 registros, desative create.
+      allow create: if idFicticio(id)
+        && request.resource.data.keys().hasAll(['cargo','numero','nome','partidoNumero','partidoSigla','partidoNome','vice'])
+        && request.resource.data.keys().hasOnly(['cargo','numero','nome','partidoNumero','partidoSigla','partidoNome','vice'])
+        && numeroValido(request.resource.data.cargo, request.resource.data.numero)
+        && id == request.resource.data.cargo + '_' + request.resource.data.numero
+        && request.resource.data.nome is string && request.resource.data.nome.size() > 0
+        && request.resource.data.partidoNumero in ['91','92','93','94']
+        && request.resource.data.numero.matches('^' + request.resource.data.partidoNumero + '[0-9]*$')
+        && request.resource.data.partidoSigla is string && request.resource.data.partidoNome is string
+        && ((request.resource.data.cargo == 'prefeito' && request.resource.data.vice is string)
+          || (request.resource.data.cargo == 'vereador' && request.resource.data.vice == null));
+      allow update, delete: if false;
+    }
+    match /votos/{id} {
+      function votoValido(v) {
+        return v.keys().hasAll(['sessaoId','cargo','tipoCargo','tipo','numero','candidato','registradoEm'])
+          && v.keys().hasOnly(['sessaoId','cargo','tipoCargo','tipo','numero','candidato','registradoEm'])
+          && v.sessaoId is string && v.sessaoId.matches('^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+          && id == v.sessaoId + '_' + v.cargo
+          && v.registradoEm is timestamp
+          && ((v.cargo == 'vereador' && v.tipoCargo == 'PROPORCIONAL')
+            || (v.cargo == 'prefeito' && v.tipoCargo == 'MAJORITARIO'))
+          && ((v.tipo == 'BRANCO' && v.numero == null && v.candidato == null)
+            || (numeroValido(v.cargo, v.numero)
+              && ((v.tipo == 'NULO' && v.candidato == null && !idFicticio(v.cargo + '_' + v.numero))
+                || (v.tipo == 'CANDIDATO' && idFicticio(v.cargo + '_' + v.numero)
+                  && v.candidato is string
+                  && exists(/databases/$(database)/documents/candidatos/$(v.cargo + '_' + v.numero))
+                  && get(/databases/$(database)/documents/candidatos/$(v.cargo + '_' + v.numero)).data.nome == v.candidato))));
+      }
+      allow create: if votoValido(request.resource.data);
+      allow read, update, delete: if false;
+    }
+  }
+}
