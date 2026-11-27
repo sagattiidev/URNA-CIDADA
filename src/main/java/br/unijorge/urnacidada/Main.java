@@ -4,6 +4,8 @@ import br.unijorge.urnacidada.controller.UrnaController;
 import br.unijorge.urnacidada.model.Cargos;
 import br.unijorge.urnacidada.service.CandidatoService;
 import br.unijorge.urnacidada.service.RepositorioVotacao;
+import br.unijorge.urnacidada.service.RepositorioLocal;
+import java.nio.file.Path;
 import br.unijorge.urnacidada.service.VotacaoService;
 import br.unijorge.urnacidada.service.firestore.ClienteFirestore;
 import br.unijorge.urnacidada.service.firestore.ConfiguracaoException;
@@ -22,30 +24,29 @@ public final class Main {
     private Main() { }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(Main::iniciar);
+        boolean firebase = java.util.Arrays.asList(args).contains("--firebase");
+        SwingUtilities.invokeLater(() -> iniciar(firebase));
     }
 
-    private static void iniciar() {
+    private static void iniciar(boolean firebase) {
         try {
             UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
         } catch (Exception ignorada) {
             // segue com o visual padrão
         }
-        ConfiguracaoFirebase config;
-        try {
-            config = ConfiguracaoFirebase.deAmbiente();
-        } catch (ConfiguracaoException e) {
-            JOptionPane.showMessageDialog(null,
-                    e.getMessage() + "\n\nDefina FIREBASE_PROJECT_ID e FIREBASE_API_KEY antes de abrir a urna.\n"
-                            + "Veja o README.md, seção \"Configuração do Firebase\".",
-                    "Firebase não configurado", JOptionPane.ERROR_MESSAGE);
-            System.exit(1);
-            return;
+        RepositorioVotacao repositorio;
+        if (firebase) {
+            try {
+                repositorio = new RepositorioFirestore(new ClienteFirestore(ConfiguracaoFirebase.deAmbiente()));
+            } catch (ConfiguracaoException e) {
+                JOptionPane.showMessageDialog(null, e.getMessage(), "Firebase não configurado", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        } else {
+            repositorio = new RepositorioLocal(Path.of("dados", "votos"));
         }
-
-        RepositorioVotacao repositorio = new RepositorioFirestore(new ClienteFirestore(config));
         Executor segundoPlano = Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "urna-firestore");
+            Thread t = new Thread(r, "urna-persistencia");
             t.setDaemon(true);
             return t;
         });

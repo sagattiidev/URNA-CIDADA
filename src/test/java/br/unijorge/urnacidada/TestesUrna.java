@@ -59,6 +59,7 @@ public final class TestesUrna {
         executar("Catálogo: rejeita candidato adulterado", TestesUrna::catalogoAdulterado);
         executar("Modelo: voto nulo exige número completo", TestesUrna::nuloInvalido);
 
+        executar("Local: persistência, retry e conflito", TestesUrna::local);
         if (java.util.Arrays.asList(args).contains("--gui")) {
             executar("Swing: votação completa usando teclado real", TestesUrna::janelaReal);
         }
@@ -521,6 +522,30 @@ public final class TestesUrna {
         RepositorioMemoria repo = new RepositorioMemoria();
         repo.candidatos.add(Cargos.PREFEITO.criarCandidato("91", "Nome diferente", new Partido("91", "PAC", "Partido"), "Vice"));
         lanca(PersistenciaException.class, () -> new CandidatoService(repo).inicializar(), "rejeita catálogo divergente");
+    }
+
+    private static void local() throws Exception {
+        var pasta = java.nio.file.Files.createTempDirectory("urna-local-");
+        try {
+            var repo = new br.unijorge.urnacidada.service.RepositorioLocal(pasta);
+            new CandidatoService(repo).inicializar();
+            igual(12, repo.listarCandidatos().size(), "catálogo offline");
+            String id = java.util.UUID.randomUUID().toString();
+            Voto voto = new VotoBranco(id, Cargos.VEREADOR);
+            repo.registrarVoto(voto);
+            var reaberto = new br.unijorge.urnacidada.service.RepositorioLocal(pasta);
+            reaberto.registrarVoto(voto);
+            var arquivo = pasta.resolve(id + "_vereador.json");
+            igual("BRANCO", ((Map<?,?>) Json.ler(java.nio.file.Files.readString(arquivo))).get("tipo"), "voto salvo");
+            lanca(PersistenciaException.class, () -> reaberto.registrarVoto(new br.unijorge.urnacidada.model.VotoNulo(id, Cargos.VEREADOR, "00000")), "não sobrescreve voto");
+            try (var arquivos = java.nio.file.Files.list(pasta)) {
+                igual(1L, arquivos.filter(p -> p.toString().endsWith(".json")).count(), "não duplica");
+            }
+        } finally {
+            try (var arquivos = java.nio.file.Files.walk(pasta)) {
+                for (var p : arquivos.sorted(java.util.Comparator.reverseOrder()).toList()) java.nio.file.Files.deleteIfExists(p);
+            }
+        }
     }
 
     private static void nuloInvalido() {

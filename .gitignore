@@ -17,3 +17,6 @@ target/
 *-firebase-adminsdk-*.json
 google-services.json
 credentials*.json
+
+# Dados de votação local (não versionar)
+/dados/

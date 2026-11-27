@@ -1,7 +1,7 @@
 # Urna Cidadã — simulador educativo de urna eletrônica
 
 Projeto acadêmico independente de extensão da UNIJORGE — Ciência da Computação.
-Simula votação em dois cargos fictícios: vereador (5 dígitos) e prefeito (2 dígitos), usando Java Swing e Firebase Cloud Firestore. A atividade promove formação cidadã, pensamento crítico e diálogo sobre desinformação (ODS 4 e 16). Não representa uma urna oficial, nem serve para eleições reais.
+Simula votação em dois cargos fictícios: vereador (5 dígitos) e prefeito (2 dígitos), usando Java Swing e persistência local (Firebase Cloud Firestore opcional). A atividade promove formação cidadã, pensamento crítico e diálogo sobre desinformação (ODS 4 e 16). Não representa uma urna oficial, nem serve para eleições reais.
 
 ## Funcionalidades
 
@@ -19,9 +19,11 @@ Requisitos: JDK 17+ e, se usar Maven, Maven 3.9+.
     mvn package
     java -jar target/urna-cidada.jar
 
-No Windows, EXECUTAR_URNA.cmd solicita as configurações de ambiente e usa o JAR gerado. No Linux/macOS, scripts/executar.sh compila, testa e abre a urna sem Maven.
+No Windows, EXECUTAR_URNA.cmd compila com o JDK e abre a urna diretamente, sem Maven ou Firebase. O modo local é padrão e guarda cada voto em dados/votos/*.json, ignorados pelo Git. No Linux/macOS, scripts/executar.sh compila, testa e abre a urna sem Maven.
 
-## Configuração do Firebase (somente banco de demonstração)
+## Configuração opcional do Firebase (somente banco de demonstração)
+
+O modo Firebase só é ativado com o argumento --firebase, por exemplo java -jar target/urna-cidada.jar --firebase.
 
 1. Crie um projeto de demonstração no Console do Firebase (https://console.firebase.google.com), habilite Firestore em modo nativo e registre um app Web.
 2. Configure as variáveis FIREBASE_PROJECT_ID e FIREBASE_API_KEY na sessão local. Nunca versione credenciais ou contas de serviço.
@@ -57,6 +59,10 @@ O pacote revisado foi compilado com JDK 21 em modo Java 17: 17 testes automatiza
 
 ## Limitações e segurança
 
-Não coleta nome ou CPF do eleitor, mas os registros contêm UUID de sessão e horário. Não há garantia de anonimato, autenticação, nem controle de uma votação por pessoa. O sistema não deve receber dados reais. Qualquer cliente com acesso ao banco de demonstração pode tentar criar sessões fictícias. A apuração é feita no console por operador autorizado, não no aplicativo; não habilite leitura pública dos votos. As regras de segurança ainda não foram validadas em projeto Firebase ou emulador. O conteúdo educativo e a oficina são entregas acadêmicas separadas.
+Não coleta nome ou CPF do eleitor, mas os registros contêm UUID de sessão e horário. Não há garantia de anonimato, autenticação, nem controle de uma votação por pessoa. O sistema não deve receber dados reais. Qualquer cliente com acesso ao banco de demonstração pode tentar criar sessões fictícias. No modo local, os votos podem ser contados a partir dos arquivos JSON; no modo Firebase, a apuração é feita no console por operador autorizado. Não há painel de apuração integrado; não habilite leitura pública dos votos. As regras de segurança ainda não foram validadas em projeto Firebase ou emulador. O conteúdo educativo e a oficina são entregas acadêmicas separadas.
 
 O repositório privado contém código-fonte e testes. Binários de build, configurações particulares e credenciais não são versionados.
+
+## Atualização offline
+
+18 testes automatizados e 1 teste Swing aprovados em ambiente Linux com JDK 21 (--release 17). A gravação local utiliza arquivos JSON por sessão/cargo, bloqueio e gravação atômica. Os dados não são criptografados nem adequados para votação real.

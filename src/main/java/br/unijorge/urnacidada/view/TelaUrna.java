@@ -116,7 +116,7 @@ public final class TelaUrna extends JPanel {
 
     public void atualizar(EstadoTela e) {
         switch (e.fase()) {
-            case CARREGANDO -> aviso("URNA CIDADÃ", "Conectando ao Firebase e carregando candidatos...", Color.BLACK, 60);
+            case CARREGANDO -> aviso("URNA CIDADÃ", "Carregando candidatos fictícios...", Color.BLACK, 60);
             case INICIO -> aviso("URNA PRONTA",
                     "<html><center>Simulador educativo - candidatos e partidos fictícios.<br><br>"
                             + "Aperte <b>CONFIRMA</b> para iniciar a votação.</center></html>", Color.BLACK, 60);
